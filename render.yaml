@@ -12,3 +12,11 @@ services:
         fromDatabase:
           name: portfolio-db # IMPORTANT: Create a PostgreSQL DB on Render named 'portfolio-db'
           property: connectionString
+      - key: MAIL_SERVER
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_USERNAME
+        value: "iamtjayearl@gmail.com"
+      - key: MAIL_PASSWORD
+        sync: false # Set this secret in the Render dashboard
