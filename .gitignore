@@ -1,15 +1,11 @@
-# Environment variables
 .env
 
-# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Local Database
 portfolio.db
 instance/
 
-# Virtual environment
 .venv/
