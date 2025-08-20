@@ -18,17 +18,19 @@ except Exception:
 app = Flask(__name__)
 CORS(app)
 
+# Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///portfolio.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+# Helper for env bools
 def _as_bool(v, default=True):
     if v is None:
         return default
     return str(v).strip().lower() in ("1", "true", "t", "on", "yes", "y")
 
+# Mail setup
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = _as_bool(os.environ.get('MAIL_USE_TLS', 'true'), True)
@@ -39,6 +41,7 @@ app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', app.co
 
 mail = Mail(app)
 
+# Models
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
@@ -63,6 +66,7 @@ class Message(db.Model):
     email = db.Column(db.String(120), nullable=False)
     message = db.Column(db.Text, nullable=False)
 
+# Routes
 @app.route('/')
 def index():
     return "<h1>API Server is Running</h1><p>Try accessing the <a href='/api/projects'>/api/projects</a> endpoint.</p>"
@@ -82,6 +86,7 @@ def contact():
     email = data.get('email').strip()
     message_text = data.get('message').strip()
 
+    # Save to DB
     try:
         new_message = Message(name=name, email=email, message=message_text)
         db.session.add(new_message)
@@ -93,6 +98,7 @@ def contact():
 
     app.logger.info(f"New message from {name} ({email}) stored in database.")
 
+    # Email
     subject = f"New Contact Form Message from {name}"
     body = f"""You have received a new message from your portfolio contact form.
 
@@ -102,20 +108,6 @@ Email: {email}
 Message:
 {message_text}
 """
-    try:
-        msg = MailMessage(
-            subject=subject,
-            sender=(name, email),
-            recipients=['iamtjayearl@gmail.com'],
-            reply_to=email
-        )
-        msg.body = body
-        mail.send(msg)
-        app.logger.info("Email sent using user's email as sender.")
-        return jsonify({"success": True, "message": "Message received and emailed!"}), 200
-
-    except Exception as err_first:
-        app.logger.warning(f"Primary send failed (sender=user). Falling back. Error: {err_first}")
 
     try:
         msg = MailMessage(
@@ -126,16 +118,18 @@ Message:
         )
         msg.body = body
         mail.send(msg)
-        app.logger.info("Email sent using default sender with reply_to set to user.")
+        app.logger.info("Email sent successfully via Gmail.")
         return jsonify({"success": True, "message": "Message received and emailed!"}), 200
 
-    except Exception as err_second:
-        app.logger.error(f"Failed to send email notification (both attempts): {err_second}")
+    except Exception as err:
+        app.logger.error(f"Failed to send email: {err}")
         return jsonify({
             "success": True,
             "message": "Message saved, but failed to send email notification."
+            "error": str(err)
         }), 200
 
+# Seeder
 @app.cli.command('seed-projects')
 def seed_projects():
     """Seeds the database with projects from data/projects.json."""
